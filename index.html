@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>当直決めツール（ズーム対応版）</title>
+    <style>
+        body { font-family: sans-serif; max-width: 900px; margin: 0 auto; padding: 10px; background: #f0f2f5; padding-bottom: 100px; touch-action: pan-x pan-y; }
+        .controls { background: #fff; padding: 15px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        h2 { margin-top: 0; font-size: 1.3rem; text-align: center; color: #007bff; }
+        label { font-weight: bold; display: block; margin-bottom: 8px; font-size: 0.95rem; }
+        
+        /* ボタン類 */
+        .btn { padding: 12px; border: none; border-radius: 8px; font-weight: bold; color: white; font-size: 14px; cursor: pointer; width: 100%; margin-bottom: 10px; }
+        .btn-blue { background: #007bff; } .btn-green { background: #28a745; } .btn-gray { background: #6c757d; }
+        .btn-row { display: flex; gap: 10px; } .btn-row .btn { margin-bottom: 0; }
+
+        /* 名前ボタン */
+        #nameButtons { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; padding: 10px; background: #f8f9fa; border-radius: 8px; }
+        .name-btn { background: #fff; border: 2px solid #ddd; color: #333; padding: 10px 14px; border-radius: 20px; font-size: 15px; font-weight: bold; touch-action: manipulation; }
+        .name-btn.active { background: #d63384; color: white; border-color: #d63384; transform: scale(1.05); box-shadow: 0 4px 6px rgba(214, 51, 132, 0.3); }
+
+        /* キャンバスエリア */
+        .canvas-container {
+            position: relative;
+            width: 100%;
+            height: 60vh; /* 画面の高さの60% */
+            border: 3px solid #ccc;
+            background: #e9ecef;
+            overflow: hidden; /* はみ出た部分を隠す */
+            border-radius: 8px;
+            touch-action: none; /* ブラウザ標準のスクロールなどを無効化 */
+        }
+        canvas { 
+            display: block; 
+            /* キャンバス自体は中央寄せしない（JSで位置制御するため） */
+            transform-origin: 0 0; /* 変形の基準を左上に */
+        }
+        .placeholder-text {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            color: #888; font-weight: bold; pointer-events: none;
+        }
+        
+        /* ステータスバー */
+        #stickyBar {
+            position: sticky; top: 0; left: 0; right: 0; z-index: 1000;
+            background: rgba(255,255,255,0.95); padding: 10px; text-align: center;
+            border-bottom: 2px solid #d63384; display: none; box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+
+    <div id="stickyBar">
+        スタンプ待機中：<span id="stickyName" style="color:#d63384; font-size:1.4em; font-weight:bold;">---</span>
+    </div>
+
+    <div class="controls">
+        <h2>📝 当直決めツール（ズーム対応）</h2>
+
+        <div style="background:#e8f0fe; padding:12px; border-radius:8px; margin-bottom:20px; border:1px dashed #007bff;">
+            <label style="color:#007bff;">🔄 データの引継ぎ (チーム連携)</label>
+            <div class="btn-row">
+                <button class="btn btn-green" id="saveDataBtn">📤 保存 (送る)</button>
+                <button class="btn btn-green" onclick="document.getElementById('loadDataInput').click()">📥 読込 (受取る)</button>
+            </div>
+            <input type="file" id="loadDataInput" accept=".json" style="display:none">
+        </div>
+
+        <label>1. 画像を選択</label>
+        <input type="file" id="imageInput" accept="image/*" style="font-size:16px; width:100%; padding:10px; background:#e9ecef; border-radius:8px;">
+        
+        <hr style="margin: 20px 0; border:0; border-top:1px solid #eee;">
+
+        <label>2. 名前リスト (編集可能)</label>
+        <textarea id="nameList" oninput="updateButtons()" style="width:100%; height:100px; padding:10px; border:1px solid #ccc; border-radius:8px; font-size:16px; box-sizing:border-box;">石井
+冨沢
+根岸
+町田
+山口
+山本
+渡邉
+大井
+立石
+比嘉
+平野
+村山
+守屋
+諸岡</textarea>
+
+        <label style="margin-top:10px;">👇 名前をタップして選択</label>
+        <div id="nameButtons"></div>
+
+        <hr style="margin: 20px 0; border:0; border-top:1px solid #eee;">
+
+        <label>3. 設定・保存</label>
+        <div style="display:flex; align-items:center; gap:15px; margin-bottom:15px;">
+            <span>文字サイズ:</span>
+            <input type="number" id="fontSize" value="24" style="width:70px; padding:10px; font-size:16px; border:1px solid #ccc; border-radius:8px;"> px
+        </div>
+
+        <div class="btn-row">
+            <button class="btn btn-gray" id="undoBtn">↩ 1つ戻る</button>
+            <button class="btn btn-blue" id="downloadBtn">📷 画像を保存</button>
+        </div>
+    </div>
+
+    <p style="text-align:center; color:#666; font-size:0.9rem; margin-bottom:5px;">
+        <b>2本指で拡大・縮小</b>、<b>1本指で移動</b><br>
+        軽く<b>タップ</b>でスタンプ、名前を<b>長押しドラッグ</b>で移動
+    </p>
+
+    <div class="canvas-container" id="canvasContainer">
+        <div class="placeholder-text" id="placeholder">ここに画像が表示されます</div>
+        <canvas id="myCanvas"></canvas>
+    </div>
+
+<script>
+    const canvas = document.getElementById('myCanvas');
+    const ctx = canvas.getContext('2d');
+    const container = document.getElementById('canvasContainer');
+    const stickyBar = document.getElementById('stickyBar');
+    const stickyName = document.getElementById('stickyName');
+    const placeholder = document.getElementById('placeholder');
+    
+    // データモデル
+    let baseImg = new Image();
+    let stamps = []; 
+    let currentName = null;
+    let imgLoaded = false;
+
+    // ビュー（表示）の状態管理
+    let scale = 1.0;
+    let originX = 0;
+    let originY = 0;
+    const MIN_SCALE = 0.5;
+    const MAX_SCALE = 5.0;
+    
+    // 操作用変数
+    let isDraggingItem = false;
+    let dragTargetIndex = -1;
+    let isPanning = false;
+    let lastPanX = 0, lastPanY = 0;
+    let touchStartTime = 0;
+    let startTapX = 0, startTapY = 0;
+    let initialPinchDistance = 0;
+    let initialScale = 1.0;
+    
+    // ポインターイベントの追跡用
+    let activePointers = new Map();
+
+    updateButtons();
+
+    // 1. 画像読み込み
+    document.getElementById('imageInput').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if(!file) return;
+        placeholder.textContent = "画像を読み込み中...";
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            baseImg = new Image();
+            baseImg.onload = function() {
+                imgLoaded = true;
+                stamps = [];
+                // 初期表示位置をリセット
+                scale = 1.0; originX = 0; originY = 0;
+                canvas.width = baseImg.width;
+                canvas.height = baseImg.height;
+                // 初期表示で中央に合わせる関数を呼ぶ
+                resetView();
+                redraw();
+                placeholder.style.display = 'none';
+            }
+            baseImg.src = event.target.result;
+        }
+        reader.readAsDataURL(file);
+    });
+
+    // 2. 描画処理（ズーム・パン対応）
+    function redraw() {
+        if (!imgLoaded) return;
+        
+        // キャンバスをクリア（変換行列もリセット）
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // 現在のズームと位置を適用して描画開始
+        ctx.setTransform(scale, 0, 0, scale, originX, originY);
+
+        // 画像を描画
+        ctx.drawImage(baseImg, 0, 0);
+
+        // スタンプを描画
+        const fontSize = parseInt(document.getElementById('fontSize').value) || 24;
+        ctx.font = `bold ${fontSize}px sans-serif`;
+        ctx.textBaseline = "middle";
+        ctx.textAlign = "center";
+
+        stamps.forEach(stamp => {
+            const metrics = ctx.measureText(stamp.name);
+            const w = metrics.width + 14;
+            const h = fontSize + 14;
+            stamp.w = w; stamp.h = h; // ヒット判定用に保存
+
+            ctx.fillStyle = "rgba(255, 255, 255, 0.95)";
+            ctx.shadowColor = "rgba(0,0,0,0.2)";
+            ctx.shadowBlur =
