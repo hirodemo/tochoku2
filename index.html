@@ -2,164 +2,81 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>当直決めツール（軽量安定版）</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>当直決めツール</title>
     <style>
-        /* スマホで見やすい基本設定 */
-        body { 
-            font-family: sans-serif; 
-            margin: 0; 
-            padding: 10px; 
-            background: #f4f7f6; 
-            color: #333;
-            padding-bottom: 100px;
-        }
-
-        .card { 
-            background: #fff; 
-            padding: 15px; 
-            border-radius: 12px; 
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1); 
-            margin-bottom: 20px; 
-        }
-
-        h2 { 
-            text-align: center; 
-            margin: 0 0 15px 0; 
-            font-size: 1.2rem; 
-            color: #007bff; 
-        }
-
-        label { display: block; font-weight: bold; margin-bottom: 5px; }
+        body { font-family: sans-serif; max-width: 900px; margin: 0 auto; padding: 10px; background: #f0f2f5; padding-bottom: 80px;}
+        .controls { background: #fff; padding: 15px; border-radius: 8px; border: 1px solid #ccc; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
         
-        input[type="file"] {
-            font-size: 16px;
-            width: 100%;
-            padding: 10px;
-            background: #e9ecef;
-            border-radius: 8px;
-            box-sizing: border-box; /* 枠からはみ出し防止 */
-        }
-
-        textarea { 
-            width: 100%; 
-            height: 80px; 
-            padding: 10px; 
-            border: 1px solid #ccc; 
-            border-radius: 8px; 
-            font-size: 16px;
-            box-sizing: border-box;
-        }
-
-        #nameButtons { 
-            display: flex; 
-            flex-wrap: wrap; 
-            gap: 8px; 
-            margin-top: 10px; 
-            padding: 10px; 
-            background: #f8f9fa; 
-            border-radius: 8px;
-        }
+        h2 { margin-top: 0; font-size: 1.2rem; text-align: center; color: #444; }
+        label { font-weight: bold; display: block; margin-bottom: 5px; font-size: 0.9rem; }
         
-        .name-btn { 
-            background: #fff; 
-            border: 2px solid #ddd; 
-            color: #333; 
-            padding: 10px 14px; 
-            border-radius: 20px; 
-            font-size: 15px; 
-            font-weight: bold;
-            touch-action: manipulation;
-        }
-        .name-btn.active { 
-            background: #d63384; 
-            color: white; 
-            border-color: #d63384; 
-            box-shadow: 0 4px 6px rgba(214, 51, 132, 0.3);
-            transform: scale(1.05); 
-        }
+        /* ボタン類 */
+        button { padding: 10px 14px; cursor: pointer; border: none; border-radius: 4px; font-weight: bold; font-size: 14px; margin: 3px; }
+        .btn-blue { background: #007bff; color: white; }
+        .btn-green { background: #28a745; color: white; }
+        .btn-gray { background: #6c757d; color: white; }
+        
+        /* 名前ボタン */
+        #nameButtons { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 5px; }
+        .name-btn { background: #fff; border: 1px solid #ccc; color: #333; padding: 10px 12px; border-radius: 4px; font-size: 15px; touch-action: manipulation;}
+        .name-btn.active { background: #d63384; color: white; border-color: #d63384; transform: scale(1.05); box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
 
-        .btn-row { display: flex; gap: 10px; margin-top: 15px; }
-        button.action-btn { 
-            flex: 1; 
-            padding: 12px; 
-            border: none; 
-            border-radius: 8px; 
-            font-weight: bold; 
-            color: white; 
-            font-size: 14px;
-        }
-        .btn-gray { background: #6c757d; }
-        .btn-blue { background: #007bff; }
-        .btn-green { background: #28a745; }
-
-        .canvas-container {
+        /* キャンバスエリア */
+        .canvas-wrapper {
             position: relative;
+            width: 100%;
+            overflow: auto; 
+            border: 2px solid #aaa;
             background: #fff;
-            border: 3px dashed #ccc;
-            min-height: 250px;
+            min-height: 300px;
             text-align: center;
-            overflow: auto; /* ここがスクロールの肝 */
-            border-radius: 8px;
-            /* iOSでのスクロールを滑らかに */
-            -webkit-overflow-scrolling: touch; 
+            overscroll-behavior: none; 
         }
         canvas { 
             display: block; 
             margin: 0 auto; 
             max-width: 100%; 
-            /* キャンバス自体のタッチ操作（スクロール等）を無効化し、JSで制御 */
             touch-action: none; 
         }
-        .placeholder-text {
-            position: absolute;
-            top: 50%; left: 50%;
-            transform: translate(-50%, -50%);
-            color: #aaa;
-            font-weight: bold;
-            pointer-events: none;
-        }
 
-        #stickyBar {
-            position: sticky;
-            top: 0;
-            left: 0;
-            right: 0;
+        /* 引継ぎエリア */
+        .relay-area { background: #e8f0fe; padding: 12px; border-radius: 6px; border: 1px dashed #007bff; margin-bottom: 15px; }
+        
+        /* ステータスバー */
+        .status-bar {
+            position: sticky; top: 0; z-index: 100;
             background: rgba(255,255,255,0.95);
-            padding: 10px;
-            text-align: center;
-            border-bottom: 2px solid #d63384;
-            z-index: 1000;
-            display: none;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            padding: 8px; border-bottom: 2px solid #d63384;
+            text-align: center; font-weight: bold;
+            display: none; 
         }
     </style>
 </head>
 <body>
 
-    <div id="stickyBar">
-        スタンプ待機中：<span id="stickyName" style="color:#d63384; font-size:1.4em; font-weight:bold;">---</span>
+    <div id="stickyStatus" class="status-bar">
+        スタンプ待機中：<span id="stickyName" style="color:#d63384; font-size:1.2em;">---</span>
     </div>
 
-    <div class="card">
-        <h2>📝 当直決めツール (軽量版)</h2>
+    <div class="controls">
+        <h2>📝 当直決めツール</h2>
 
-        <div style="background:#e8f0fe; padding:10px; border-radius:8px; margin-bottom:15px;">
-            <label>🔄 データの引継ぎ</label>
-            <div class="btn-row" style="margin-top:5px;">
-                <button class="action-btn btn-green" id="saveDataBtn">保存 (送る)</button>
-                <button class="action-btn btn-green" onclick="document.getElementById('loadDataInput').click()">読込 (受取る)</button>
-            </div>
+        <div class="relay-area">
+            <label>🔄 チーム連携（データ送受信）</label>
+            <button class="btn-green" id="saveDataBtn">📤 作業データを保存 (送る)</button>
+            <button class="btn-green" onclick="document.getElementById('loadDataInput').click()">📥 データ読込 (受取る)</button>
             <input type="file" id="loadDataInput" accept=".json" style="display:none">
+            <p style="font-size:11px; margin:5px 0 0; color:#555;">※作業状態を保存して、LINE等で次の人に送れます。</p>
         </div>
 
         <label>1. 画像を選択</label>
         <input type="file" id="imageInput" accept="image/*">
         
-        <hr style="margin: 20px 0; border:0; border-top:1px solid #eee;">
+        <hr style="margin: 15px 0; border:0; border-top:1px solid #eee;">
 
-        <label>2. 名前リスト (編集可)</label>
-        <textarea id="nameList" oninput="updateButtons()">石井
+        <label>2. 名前を選択</label>
+        <textarea id="nameList" style="display:none;">石井
 冨沢
 根岸
 町田
@@ -173,86 +90,70 @@
 村山
 守屋
 諸岡</textarea>
-
-        <label style="margin-top:10px;">👇 名前をタップして選択</label>
+        
         <div id="nameButtons"></div>
 
-        <hr style="margin: 20px 0; border:0; border-top:1px solid #eee;">
+        <hr style="margin: 15px 0; border:0; border-top:1px solid #eee;">
 
-        <label>3. 文字サイズ</label>
-        <div style="display:flex; align-items:center; gap:10px;">
-            <input type="number" id="fontSize" value="18" style="width:60px; padding:10px; font-size:16px;"> px
+        <label>3. 設定・保存</label>
+        <div>
+            <label style="display:inline-block; margin-right:10px;">サイズ: <input type="number" id="fontSize" value="18" style="width:50px"> px</label>
+            <button id="undoBtn" class="btn-gray">↩ 1つ戻る</button>
+            <button id="clearBtn" class="btn-gray" style="background:#dc3545;">🗑 全消去</button>
         </div>
-
-        <div class="btn-row">
-            <button class="action-btn btn-gray" id="undoBtn">1つ戻る</button>
-            <button class="action-btn btn-blue" id="downloadBtn">画像を保存</button>
+        <div style="margin-top:10px;">
+            <button id="downloadBtn" class="btn-blue" style="width:100%; padding:12px;">📷 画像として完成保存</button>
         </div>
     </div>
 
-    <p style="text-align:center; color:#666; font-size:0.9rem;">
-        画像を<b>タップ</b>でスタンプ<br>
-        名前を<b>指でなぞると移動</b>
-    </p>
-
-    <div class="canvas-container">
-        <div class="placeholder-text" id="placeholder">ここに画像が表示されます</div>
+    <p style="text-align:center; font-size:0.8rem; color:#666;">👇 <b>空き地をタップ</b>でスタンプ、<b>名前をドラッグ</b>で移動</p>
+    <div class="canvas-wrapper" id="canvasWrapper">
         <canvas id="myCanvas"></canvas>
     </div>
 
 <script>
     const canvas = document.getElementById('myCanvas');
     const ctx = canvas.getContext('2d');
-    const stickyBar = document.getElementById('stickyBar');
-    const stickyName = document.getElementById('stickyName');
-    const placeholder = document.getElementById('placeholder');
+    const stickyStatus = document.getElementById('stickyStatus');
     
     let baseImg = new Image();
     let stamps = []; 
     let currentName = null;
     let imgLoaded = false;
     
+    // ドラッグ用変数
     let isDragging = false;
     let dragTargetIndex = -1;
     let startX = 0;
     let startY = 0;
     let touchStartTime = 0;
 
+    // 初期化
     updateButtons();
 
+    // 1. 画像読み込み
     document.getElementById('imageInput').addEventListener('change', function(e) {
         const file = e.target.files[0];
         if(!file) return;
-
-        placeholder.textContent = "画像を処理中...";
-        
         const reader = new FileReader();
         reader.onload = function(event) {
             baseImg = new Image();
             baseImg.onload = function() {
                 imgLoaded = true;
-                stamps = [];
+                stamps = []; 
                 fitCanvas();
                 redraw();
-                placeholder.style.display = 'none';
-                alert("画像が入りました！");
-            }
-            baseImg.onerror = function() {
-                alert("画像の読み込みに失敗しました。");
             }
             baseImg.src = event.target.result;
         }
         reader.readAsDataURL(file);
     });
 
-    // 画面幅に合わせてリサイズ（ここを軽量化）
     function fitCanvas() {
         if(!imgLoaded) return;
         let w = baseImg.width;
         let h = baseImg.height;
-        
-        // スマホのメモリ落ちを防ぐため、最大幅を1200pxに制限
-        const MAX_W = 1200; 
+        const MAX_W = 2000;
         if(w > MAX_W) {
             h = Math.round(h * (MAX_W / w));
             w = MAX_W;
@@ -261,58 +162,40 @@
         canvas.height = h;
     }
 
+    // 2. 描画処理
     function redraw() {
         if (!imgLoaded) return;
+
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.drawImage(baseImg, 0, 0, canvas.width, canvas.height);
 
-        const fontSize = parseInt(document.getElementById('fontSize').value) || 18;
+        const fontSize = parseInt(document.getElementById('fontSize').value);
         ctx.font = `bold ${fontSize}px sans-serif`;
         ctx.textBaseline = "middle";
         ctx.textAlign = "center";
 
         stamps.forEach(stamp => {
             const metrics = ctx.measureText(stamp.name);
-            const w = metrics.width + 10;
+            const w = metrics.width + 10; 
             const h = fontSize + 10;
             stamp.w = w;
             stamp.h = h;
 
             ctx.fillStyle = "rgba(255, 255, 255, 0.9)";
+            ctx.shadowColor = "rgba(0,0,0,0.3)";
+            ctx.shadowBlur = 4;
             ctx.fillRect(stamp.x - w/2, stamp.y - h/2, w, h);
-            
+            ctx.shadowBlur = 0;
+
             ctx.fillStyle = "black";
             ctx.fillText(stamp.name, stamp.x, stamp.y);
         });
     }
 
-    function updateButtons() {
-        const listArea = document.getElementById('nameButtons');
-        const textVal = document.getElementById('nameList').value;
-        listArea.innerHTML = "";
-        
-        if (!textVal) return;
-
-        const names = textVal.split('\n');
-        names.forEach(name => {
-            if(!name.trim()) return;
-            const btn = document.createElement('div');
-            btn.className = "name-btn";
-            btn.textContent = name;
-            btn.onclick = () => {
-                currentName = name;
-                stickyName.textContent = name;
-                stickyBar.style.display = 'block';
-                document.querySelectorAll('.name-btn').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-            };
-            listArea.appendChild(btn);
-        });
-    }
-
-    // タッチ操作関連
+    // 3. タッチ＆ドラッグ制御
     canvas.addEventListener('pointerdown', function(e) {
         if (!imgLoaded) return;
+        
         const pos = getPos(e);
         const hitIndex = getHitStampIndex(pos.x, pos.y);
 
@@ -320,7 +203,7 @@
             isDragging = true;
             dragTargetIndex = hitIndex;
             canvas.setPointerCapture(e.pointerId);
-            e.preventDefault();
+            e.preventDefault(); 
         } else {
             touchStartTime = Date.now();
             startX = e.clientX;
@@ -345,10 +228,12 @@
             canvas.releasePointerCapture(e.pointerId);
         } else {
             const dist = Math.hypot(e.clientX - startX, e.clientY - startY);
-            if (dist < 10 && (Date.now() - touchStartTime) < 500) {
+            const timeDiff = Date.now() - touchStartTime;
+
+            if (dist < 10 && timeDiff < 500) {
                 if (!currentName) {
-                    alert("↑ 先にリストから名前を選んでください");
-                    window.scrollTo({top: 0, behavior: 'smooth'});
+                    alert("名前を選んでください");
+                    document.querySelector('.controls').scrollIntoView({behavior:'smooth'});
                     return;
                 }
                 const pos = getPos(e);
@@ -371,34 +256,62 @@
     function getHitStampIndex(x, y) {
         for (let i = stamps.length - 1; i >= 0; i--) {
             const s = stamps[i];
-            if (x >= s.x - (s.w*1.2)/2 && x <= s.x + (s.w*1.2)/2 &&
-                y >= s.y - (s.h*1.2)/2 && y <= s.y + (s.h*1.2)/2) {
+            if (x >= s.x - s.w/2 && x <= s.x + s.w/2 &&
+                y >= s.y - s.h/2 && y <= s.y + s.h/2) {
                 return i;
             }
         }
         return -1;
     }
 
+    // 4. ボタン制御
+    function updateButtons() {
+        const listArea = document.getElementById('nameButtons');
+        listArea.innerHTML = "";
+        const names = document.getElementById('nameList').value.split('\n');
+        
+        names.forEach(name => {
+            if(!name.trim()) return;
+            const btn = document.createElement('button');
+            btn.className = "name-btn";
+            btn.textContent = name;
+            btn.onclick = () => {
+                currentName = name;
+                document.getElementById('stickyName').textContent = name;
+                stickyStatus.style.display = 'block';
+                document.querySelectorAll('.name-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+            };
+            listArea.appendChild(btn);
+        });
+    }
+
     document.getElementById('undoBtn').addEventListener('click', () => {
         if(stamps.length > 0) { stamps.pop(); redraw(); }
     });
     
+    document.getElementById('clearBtn').addEventListener('click', () => {
+        if(confirm("配置したスタンプを全て消しますか？")) { stamps = []; redraw(); }
+    });
+
     document.getElementById('downloadBtn').addEventListener('click', () => {
         if(!imgLoaded) return;
         const link = document.createElement('a');
-        link.download = 'roster_result.png';
+        link.download = 'roster_complete.png';
         link.href = canvas.toDataURL();
         link.click();
     });
 
+    // データ引継ぎ機能
     document.getElementById('saveDataBtn').addEventListener('click', () => {
-        if(!imgLoaded) { alert("画像がありません"); return; }
+        if(!imgLoaded) { alert("保存するデータがありません"); return; }
         const data = { imageSrc: baseImg.src, stamps: stamps };
         const blob = new Blob([JSON.stringify(data)], {type: "application/json"});
         const link = document.createElement('a');
         link.href = URL.createObjectURL(blob);
-        link.download = "data.json";
+        link.download = "roster_data_" + new Date().getHours() + new Date().getMinutes() + ".json";
         link.click();
+        alert("作業データを保存しました。\nこのファイルを次の人に送ってください。");
     });
 
     document.getElementById('loadDataInput').addEventListener('change', (e) => {
@@ -414,11 +327,10 @@
                     stamps = data.stamps || [];
                     fitCanvas();
                     redraw();
-                    placeholder.style.display = 'none';
-                    alert("データを読み込みました！");
+                    alert("データを復元しました！");
                 };
                 baseImg.src = data.imageSrc;
-            } catch(err) { alert("読込エラー"); }
+            } catch(err) { alert("データ読み込み失敗"); }
         };
         reader.readAsText(file);
     });
